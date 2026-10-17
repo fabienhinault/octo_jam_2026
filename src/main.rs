@@ -192,29 +192,7 @@ fn check_for_ball_collisions(
                     }
                 }
             }
-
-            // Reflect the ball's velocity when it collides
-            let mut reflect_x = false;
-            let mut reflect_y = false;
-
-            // Reflect only if the velocity is in the opposite direction of the collision
-            // This prevents the ball from getting stuck inside the bar
-            match collision {
-                Collision::Left => reflect_x = ball_velocity.x > 0.0,
-                Collision::Right => reflect_x = ball_velocity.x < 0.0,
-                Collision::Top => reflect_y = ball_velocity.y < 0.0,
-                Collision::Bottom => reflect_y = ball_velocity.y > 0.0,
-            }
-
-            // Reflect velocity on the x-axis if we hit something on the x-axis
-            if reflect_x {
-                ball_velocity.x = -ball_velocity.x;
-            }
-
-            // Reflect velocity on the y-axis if we hit something on the y-axis
-            if reflect_y {
-                ball_velocity.y = -ball_velocity.y;
-            }
+            **ball_velocity = collision.reflect(&ball_velocity.0);
         }
     }
 }
