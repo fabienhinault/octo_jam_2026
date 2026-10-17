@@ -12,16 +12,16 @@ pub(crate) const GAP_BETWEEN_PADDLE_AND_FLOOR: f32 = 60.0;
 // We set the z-value of the ball to 1 so it renders on top in the case of overlapping sprites.
 pub(crate) const BALL_STARTING_POSITION: Vec3 = Vec3::new(0.0, -50.0, 1.0);
 
-pub(crate) const BALL_SPEED: f32 = 400.0;
+pub(crate) const BALL_SPEED: f32 = 300.0;
 
 pub(crate) const INITIAL_BALL_DIRECTION: Vec2 = Vec2::new(0.5, -0.5);
 
-pub(crate) const BRICK_SIZE: Vec2 = Vec2::new(100., 30.);
+pub(crate) const BRICK_SIZE: Vec2 = Vec2::new(40., 30.);
 
 // These values are exact
 pub(crate) const GAP_BETWEEN_PADDLE_AND_BRICKS: f32 = 270.0;
 
-pub(crate) const GAP_BETWEEN_BRICKS: f32 = 5.0;
+pub(crate) const GAP_BETWEEN_BRICKS: f32 = 45.0;
 
 // These values are lower bounds, as the number of bricks is computed
 pub(crate) const GAP_BETWEEN_BRICKS_AND_CEILING: f32 = 20.0;

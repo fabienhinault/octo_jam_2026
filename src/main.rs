@@ -120,25 +120,31 @@ fn update_scoreboard(
     *writer.text(*score_root, 1) = score.to_string();
 }
 
-fn check_for_brick_brick_collisions(bricks: Query<(&Transform, &mut Velocity), With<Brick>>) {
+fn check_for_brick_brick_collisions(
+    mut bricks: Query<(Entity, &Transform, &mut Velocity), With<Brick>>,
+) {
     let boxes: Vec<_> = bricks
         .iter()
-        .map(|(transform0, _)| {
-            Aabb2d::new(
-                transform0.translation.truncate(),
-                transform0.scale.truncate() / 2.,
+        .map(|(e, transform0, _)| {
+            (
+                e,
+                Aabb2d::new(
+                    transform0.translation.truncate(),
+                    transform0.scale.truncate() / 2.,
+                ),
             )
         })
         .collect();
-    for (i, box0) in boxes.iter().enumerate() {
+    for (i, (entity0, box0)) in boxes.iter().enumerate() {
         for j in i + 1..boxes.len() {
-            let collisions = box_collision(box0, &boxes[j]);
-            if let Some(_) = collisions {
-                for (i_velocity, (_, mut velocity)) in bricks.into_iter().enumerate() {
-                    if i_velocity == i || i_velocity == j {
-                        **velocity *= -0.5;
-                    }
-                }
+            let collisions = box_collision(box0, &boxes[j].1);
+            if let Some((collision0, collision1)) = collisions {
+                let vv0 = bricks.get(*entity0).expect("Query::get()").2.0;
+                let (_, _, mut v1) = bricks.get_mut(boxes[j].0).expect("Query::get_mut()");
+                let vv1 = v1.0;
+                **v1 = 0.5 * (vv0 + collision1.reflect(&vv1));
+                let (_, _, mut v0) = bricks.get_mut(*entity0).expect("Query::get_mut()");
+                **v0 = 0.5 * (vv1 + collision0.reflect(&vv0));
                 return;
             }
         }
@@ -227,6 +233,35 @@ enum Collision {
     Right,
     Top,
     Bottom,
+}
+
+impl Collision {
+    fn reflect(&self, v: &Vec2) -> Vec2 {
+        let mut reflected = *v;
+        // Reflect the ball's velocity when it collides
+        let mut reflect_x = false;
+        let mut reflect_y = false;
+
+        // Reflect only if the velocity is in the opposite direction of the collision
+        // This prevents the ball from getting stuck inside the bar
+        match self {
+            Self::Left => reflect_x = v.x > 0.0,
+            Self::Right => reflect_x = v.x < 0.0,
+            Self::Top => reflect_y = v.y < 0.0,
+            Self::Bottom => reflect_y = v.y > 0.0,
+        }
+
+        // Reflect velocity on the x-axis if we hit something on the x-axis
+        if reflect_x {
+            reflected.x = -v.x;
+        }
+
+        // Reflect velocity on the y-axis if we hit something on the y-axis
+        if reflect_y {
+            reflected.y = -v.y;
+        }
+        reflected
+    }
 }
 
 // Returns `Some` if `ball` collides with `bounding_box`.
