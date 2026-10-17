@@ -28,6 +28,8 @@ const GAP_BETWEEN_BRICKS: f32 = 5.0;
 // These values are lower bounds, as the number of bricks is computed
 const GAP_BETWEEN_BRICKS_AND_CEILING: f32 = 20.0;
 const GAP_BETWEEN_BRICKS_AND_SIDES: f32 = 20.0;
+const BRICKS_SPEED: f32 = 4.0;
+const INITIAL_BRICKS_DIRECTION: Vec2 = Vec2::new(0.5, 0.5);
 
 const SCOREBOARD_FONT_SIZE: FontSize = FontSize::Px(33.0);
 const SCOREBOARD_TEXT_PADDING: Val = Val::Px(5.0);
@@ -86,6 +88,7 @@ struct CollisionSound(Handle<AudioSource>);
 struct Collider;
 
 #[derive(Component)]
+struct Health(u8);
 
 // This resource tracks the game's score
 #[derive(Resource, Deref, DerefMut)]
@@ -212,6 +215,8 @@ fn setup(
                 },
                 Brick,
                 Collider,
+                Velocity(INITIAL_BRICKS_DIRECTION.normalize() * 0.0),
+                Health(2),
             ));
         }
     }
@@ -265,11 +270,14 @@ fn check_for_collisions(
     mut commands: Commands,
     mut score: ResMut<Score>,
     ball_query: Single<(&mut Velocity, &Transform), With<Ball>>,
-    collider_query: Query<(Entity, &Transform, Option<&Brick>), With<Collider>>,
+    collider_query: Query<
+        (Entity, &Transform, Option<&Brick>, Option<&mut Health>),
+        With<Collider>,
+    >,
 ) {
     let (mut ball_velocity, ball_transform) = ball_query.into_inner();
 
-    for (collider_entity, collider_transform, maybe_brick) in &collider_query {
+    for (collider_entity, collider_transform, maybe_brick, maybe_health) in collider_query {
         let collision = ball_collision(
             BoundingCircle::new(ball_transform.translation.truncate(), BALL_DIAMETER / 2.),
             Aabb2d::new(
@@ -282,10 +290,12 @@ fn check_for_collisions(
             // Trigger observers of the "BallCollided" event
             commands.trigger(BallCollided);
 
-            // Bricks should be despawned and increment the scoreboard on collision
-            if maybe_brick.is_some() {
-                commands.entity(collider_entity).despawn();
-                **score += 1;
+            if let Some(mut health) = maybe_health {
+                (*health).0 -= 1;
+                if health.0 == 0 {
+                    commands.entity(collider_entity).despawn();
+                    **score += 1;
+                }
             }
 
             // Reflect the ball's velocity when it collides
