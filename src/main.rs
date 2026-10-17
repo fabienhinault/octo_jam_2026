@@ -123,14 +123,20 @@ fn update_scoreboard(
 fn check_for_brick_collisions(
     mut commands: Commands,
     mut score: ResMut<Score>,
-    mut collindings: ParamSet<(
-        Query<(&mut Velocity, &Transform), With<Brick>>,
-        Query<(Entity, &Transform, Option<&mut Velocity>), With<Collider>>,
-    )>,
+    collider_query: Query<(Entity, &Transform, Option<&mut Velocity>), With<Collider>>,
 ) {
-    let brick_query = collindings.p0();
-    //let (mut brick_velocity, brick_transform) = brick_query.into_inner();
-    let collider_query = collindings.p1();
+    let mut collider_iter = collider_query.into_iter();
+    if let Some((collider_entity0, collider_transform0, maybe_velocity0)) = collider_iter.next() {
+        if let Some((collider_entity1, collider_transform1, maybe_velocity1)) = collider_iter.next()
+        {
+            if let Some(mut velocity0) = maybe_velocity0 {
+                **velocity0 *= -0.5;
+            }
+            if let Some(mut velocity1) = maybe_velocity1 {
+                **velocity1 *= -0.5;
+            }
+        }
+    }
 }
 
 fn check_for_ball_collisions(
@@ -149,7 +155,7 @@ fn check_for_ball_collisions(
 ) {
     let (mut ball_velocity, ball_transform) = ball_query.into_inner();
 
-    for (collider_entity, collider_transform, maybe_health, v) in collider_query {
+    for (collider_entity, collider_transform, maybe_health, maybe_velocity) in collider_query {
         let collision = ball_collision(
             BoundingCircle::new(ball_transform.translation.truncate(), BALL_DIAMETER / 2.),
             Aabb2d::new(
@@ -168,7 +174,7 @@ fn check_for_ball_collisions(
                     commands.entity(collider_entity).despawn();
                     **score += 1;
                 } else {
-                    if let Some(mut velocity) = v {
+                    if let Some(mut velocity) = maybe_velocity {
                         **velocity = ball_velocity.clone();
                         **velocity *= 0.5;
                     }
