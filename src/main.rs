@@ -269,11 +269,19 @@ fn check_for_collisions(
     mut commands: Commands,
     mut score: ResMut<Score>,
     ball_query: Single<(&mut Velocity, &Transform), With<Ball>>,
-    collider_query: Query<(Entity, &Transform, Option<&mut Health>), With<Collider>>,
+    collider_query: Query<
+        (
+            Entity,
+            &Transform,
+            Option<&mut Health>,
+            Option<&mut Velocity>,
+        ),
+        (With<Collider>, Without<Ball>),
+    >,
 ) {
     let (mut ball_velocity, ball_transform) = ball_query.into_inner();
 
-    for (collider_entity, collider_transform, maybe_health) in collider_query {
+    for (collider_entity, collider_transform, maybe_health, v) in collider_query {
         let collision = ball_collision(
             BoundingCircle::new(ball_transform.translation.truncate(), BALL_DIAMETER / 2.),
             Aabb2d::new(
