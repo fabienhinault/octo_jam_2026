@@ -34,7 +34,7 @@ fn main() {
                 apply_velocity,
                 move_paddle,
                 check_for_ball_collisions,
-                check_for_brick_collisions,
+                check_for_brick_brick_collisions,
             )
                 // `chain`ing systems together runs them in order
                 .chain(),
@@ -120,22 +120,19 @@ fn update_scoreboard(
     *writer.text(*score_root, 1) = score.to_string();
 }
 
-fn check_for_brick_collisions(
-    mut commands: Commands,
-    mut score: ResMut<Score>,
-    collider_query: Query<(Entity, &Transform, Option<&mut Velocity>), With<Collider>>,
+fn check_for_brick_brick_collisions(
+    mut collidings: ParamSet<(
+        Query<&mut Velocity, With<Brick>>,
+        Query<&mut Velocity, With<Brick>>,
+    )>,
 ) {
-    let mut collider_iter = collider_query.into_iter();
-    if let Some((collider_entity0, collider_transform0, maybe_velocity0)) = collider_iter.next() {
-        if let Some((collider_entity1, collider_transform1, maybe_velocity1)) = collider_iter.next()
-        {
-            if let Some(mut velocity0) = maybe_velocity0 {
-                **velocity0 *= -0.5;
-            }
-            if let Some(mut velocity1) = maybe_velocity1 {
-                **velocity1 *= -0.5;
-            }
-        }
+    let mut collider_iter0 = collidings.p0().into_iter();
+    if let Some(mut velocity0) = collider_iter0.next() {
+        **velocity0 *= -0.5;
+    }
+    let mut collider_iter1 = collidings.p1().into_iter();
+    if let Some(mut velocity1) = collider_iter1.next() {
+        **velocity1 *= -0.5;
     }
 }
 
