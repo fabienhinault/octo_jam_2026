@@ -35,6 +35,7 @@ fn main() {
                 move_paddle,
                 check_for_ball_collisions,
                 check_for_brick_brick_collisions,
+                check_for_brick_fix_collisions,
             )
                 // `chain`ing systems together runs them in order
                 .chain(),
@@ -120,6 +121,47 @@ fn update_scoreboard(
     *writer.text(*score_root, 1) = score.to_string();
 }
 
+// poor naming since the paddle is part of colliders
+fn check_for_brick_fix_collisions(
+    mut bricks: Query<(Entity, &Transform, &mut Velocity), With<Brick>>,
+    colliders: Query<(Entity, &Transform), (With<Collider>, Without<Brick>)>,
+) {
+    let brick_boxes: Vec<_> = bricks
+        .iter()
+        .map(|(e, transform, _)| {
+            (
+                e,
+                Aabb2d::new(
+                    transform.translation.truncate(),
+                    transform.scale.truncate() / 2.,
+                ),
+            )
+        })
+        .collect();
+    let fix_boxes: Vec<_> = colliders
+        .iter()
+        .map(|(e, transform)| {
+            (
+                e,
+                Aabb2d::new(
+                    transform.translation.truncate(),
+                    transform.scale.truncate() / 2.,
+                ),
+            )
+        })
+        .collect();
+    for (entity0, box0) in brick_boxes.iter() {
+        for (_, box1) in fix_boxes.iter() {
+            let collisions = box_collision(box0, box1);
+            if let Some((collision0, _)) = collisions {
+                let vv = bricks.get(*entity0).expect("Query::get()").2.0;
+                let (_, _, mut v) = bricks.get_mut(*entity0).expect("Query::get_mut()");
+                **v = collision0.reflect(&vv);
+            }
+        }
+    }
+}
+
 fn check_for_brick_brick_collisions(
     mut bricks: Query<(Entity, &Transform, &mut Velocity), With<Brick>>,
 ) {
@@ -145,7 +187,6 @@ fn check_for_brick_brick_collisions(
                 **v1 = 0.5 * (vv0 + collision1.reflect(&vv1));
                 let (_, _, mut v0) = bricks.get_mut(*entity0).expect("Query::get_mut()");
                 **v0 = 0.5 * (vv1 + collision0.reflect(&vv0));
-                return;
             }
         }
     }

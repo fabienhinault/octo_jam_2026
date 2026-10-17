@@ -12,7 +12,7 @@ pub(crate) const GAP_BETWEEN_PADDLE_AND_FLOOR: f32 = 60.0;
 // We set the z-value of the ball to 1 so it renders on top in the case of overlapping sprites.
 pub(crate) const BALL_STARTING_POSITION: Vec3 = Vec3::new(0.0, -50.0, 1.0);
 
-pub(crate) const BALL_SPEED: f32 = 300.0;
+pub(crate) const BALL_SPEED: f32 = 250.0;
 
 pub(crate) const INITIAL_BALL_DIRECTION: Vec2 = Vec2::new(0.5, -0.5);
 
