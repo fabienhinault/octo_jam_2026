@@ -120,19 +120,28 @@ fn update_scoreboard(
     *writer.text(*score_root, 1) = score.to_string();
 }
 
-fn check_for_brick_brick_collisions(
-    mut collidings: ParamSet<(
-        Query<&mut Velocity, With<Brick>>,
-        Query<&mut Velocity, With<Brick>>,
-    )>,
-) {
-    let mut collider_iter0 = collidings.p0().into_iter();
-    if let Some(mut velocity0) = collider_iter0.next() {
-        **velocity0 *= -0.5;
-    }
-    let mut collider_iter1 = collidings.p1().into_iter();
-    if let Some(mut velocity1) = collider_iter1.next() {
-        **velocity1 *= -0.5;
+fn check_for_brick_brick_collisions(bricks: Query<(&Transform, &mut Velocity), With<Brick>>) {
+    let boxes: Vec<_> = bricks
+        .iter()
+        .map(|(transform0, _)| {
+            Aabb2d::new(
+                transform0.translation.truncate(),
+                transform0.scale.truncate() / 2.,
+            )
+        })
+        .collect();
+    for (i, box0) in boxes.iter().enumerate() {
+        for j in i + 1..boxes.len() {
+            let collisions = box_collision(box0, &boxes[j]);
+            if let Some(_) = collisions {
+                for (i_velocity, (_, mut velocity)) in bricks.into_iter().enumerate() {
+                    if i_velocity == i || i_velocity == j {
+                        **velocity *= 0.5;
+                    }
+                }
+                return;
+            }
+        }
     }
 }
 
@@ -242,4 +251,26 @@ fn ball_collision(ball: BoundingCircle, bounding_box: Aabb2d) -> Option<Collisio
     };
 
     Some(side)
+}
+
+// Returns `Some` if `ball` collides with `bounding_box`.
+// The returned `Collision` is the side of `bounding_box` that `ball` hit.
+fn box_collision(bounding_box0: &Aabb2d, bounding_box1: &Aabb2d) -> Option<(Collision, Collision)> {
+    if !bounding_box0.intersects(bounding_box1) {
+        return None;
+    }
+
+    let closest = bounding_box0.closest_point(bounding_box1.center());
+    let offset = bounding_box0.center() - closest;
+    Some(if offset.x.abs() > offset.y.abs() {
+        if offset.x < 0. {
+            (Collision::Left, Collision::Right)
+        } else {
+            (Collision::Right, Collision::Left)
+        }
+    } else if offset.y > 0. {
+        (Collision::Top, Collision::Bottom)
+    } else {
+        (Collision::Bottom, Collision::Top)
+    })
 }
