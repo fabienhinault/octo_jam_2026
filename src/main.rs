@@ -28,7 +28,6 @@ const GAP_BETWEEN_BRICKS: f32 = 5.0;
 // These values are lower bounds, as the number of bricks is computed
 const GAP_BETWEEN_BRICKS_AND_CEILING: f32 = 20.0;
 const GAP_BETWEEN_BRICKS_AND_SIDES: f32 = 20.0;
-const BRICKS_SPEED: f32 = 4.0;
 const INITIAL_BRICKS_DIRECTION: Vec2 = Vec2::new(0.5, 0.5);
 
 const SCOREBOARD_FONT_SIZE: FontSize = FontSize::Px(33.0);
@@ -270,14 +269,11 @@ fn check_for_collisions(
     mut commands: Commands,
     mut score: ResMut<Score>,
     ball_query: Single<(&mut Velocity, &Transform), With<Ball>>,
-    collider_query: Query<
-        (Entity, &Transform, Option<&Brick>, Option<&mut Health>),
-        With<Collider>,
-    >,
+    collider_query: Query<(Entity, &Transform, Option<&mut Health>), With<Collider>>,
 ) {
     let (mut ball_velocity, ball_transform) = ball_query.into_inner();
 
-    for (collider_entity, collider_transform, maybe_brick, maybe_health) in collider_query {
+    for (collider_entity, collider_transform, maybe_health) in collider_query {
         let collision = ball_collision(
             BoundingCircle::new(ball_transform.translation.truncate(), BALL_DIAMETER / 2.),
             Aabb2d::new(
