@@ -30,7 +30,12 @@ fn main() {
         // which is called once per frame.
         .add_systems(
             Update,
-            (apply_velocity, move_paddle, check_for_collisions)
+            (
+                apply_velocity,
+                move_paddle,
+                check_for_ball_collisions,
+                check_for_brick_collisions,
+            )
                 // `chain`ing systems together runs them in order
                 .chain(),
         )
@@ -115,7 +120,20 @@ fn update_scoreboard(
     *writer.text(*score_root, 1) = score.to_string();
 }
 
-fn check_for_collisions(
+fn check_for_brick_collisions(
+    mut commands: Commands,
+    mut score: ResMut<Score>,
+    mut collindings: ParamSet<(
+        Query<(&mut Velocity, &Transform), With<Brick>>,
+        Query<(Entity, &Transform, Option<&mut Velocity>), With<Collider>>,
+    )>,
+) {
+    let brick_query = collindings.p0();
+    //let (mut brick_velocity, brick_transform) = brick_query.into_inner();
+    let collider_query = collindings.p1();
+}
+
+fn check_for_ball_collisions(
     mut commands: Commands,
     mut score: ResMut<Score>,
     ball_query: Single<(&mut Velocity, &Transform), With<Ball>>,
