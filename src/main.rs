@@ -149,6 +149,11 @@ fn check_for_collisions(
                 if health.0 == 0 {
                     commands.entity(collider_entity).despawn();
                     **score += 1;
+                } else {
+                    if let Some(mut velocity) = v {
+                        **velocity = ball_velocity.clone();
+                        **velocity *= 0.5;
+                    }
                 }
             }
 
