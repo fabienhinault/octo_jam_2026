@@ -5,6 +5,7 @@
 use bevy::prelude::*;
 
 mod stepping;
+mod wall;
 
 // These constants are defined in `Transform` units.
 // Using the default 2D camera they correspond 1:1 with screen pixels.
@@ -19,14 +20,6 @@ const BALL_STARTING_POSITION: Vec3 = Vec3::new(0.0, -50.0, 1.0);
 const BALL_DIAMETER: f32 = 30.;
 const BALL_SPEED: f32 = 400.0;
 const INITIAL_BALL_DIRECTION: Vec2 = Vec2::new(0.5, -0.5);
-
-const WALL_THICKNESS: f32 = 10.0;
-// x coordinates
-const LEFT_WALL: f32 = -450.;
-const RIGHT_WALL: f32 = 450.;
-// y coordinates
-const BOTTOM_WALL: f32 = -300.;
-const TOP_WALL: f32 = 300.;
 
 const BRICK_SIZE: Vec2 = Vec2::new(100., 30.);
 // These values are exact
@@ -43,7 +36,6 @@ const BACKGROUND_COLOR: Color = Color::srgb(0.9, 0.9, 0.9);
 const PADDLE_COLOR: Color = Color::srgb(0.3, 0.3, 0.7);
 const BALL_COLOR: Color = Color::srgb(1.0, 0.5, 0.5);
 const BRICK_COLOR: Color = Color::srgb(0.5, 0.5, 1.0);
-const WALL_COLOR: Color = Color::srgb(0.8, 0.8, 0.8);
 const TEXT_COLOR: Color = Color::srgb(0.5, 0.5, 1.0);
 const SCORE_COLOR: Color = Color::srgb(1.0, 0.5, 0.5);
 
@@ -93,70 +85,7 @@ struct CollisionSound(Handle<AudioSource>);
 #[derive(Component, Default)]
 struct Collider;
 
-// This is a collection of the components that define a "Wall" in our game
 #[derive(Component)]
-#[require(Sprite, Transform, Collider)]
-struct Wall;
-
-/// Which side of the arena is this wall located on?
-enum WallLocation {
-    Left,
-    Right,
-    Bottom,
-    Top,
-}
-
-impl WallLocation {
-    /// Location of the *center* of the wall, used in `transform.translation()`
-    fn position(&self) -> Vec2 {
-        match self {
-            WallLocation::Left => Vec2::new(LEFT_WALL, 0.),
-            WallLocation::Right => Vec2::new(RIGHT_WALL, 0.),
-            WallLocation::Bottom => Vec2::new(0., BOTTOM_WALL),
-            WallLocation::Top => Vec2::new(0., TOP_WALL),
-        }
-    }
-
-    /// (x, y) dimensions of the wall, used in `transform.scale()`
-    fn size(&self) -> Vec2 {
-        let arena_height = TOP_WALL - BOTTOM_WALL;
-        let arena_width = RIGHT_WALL - LEFT_WALL;
-        // Make sure we haven't messed up our constants
-        assert!(arena_height > 0.0);
-        assert!(arena_width > 0.0);
-
-        match self {
-            WallLocation::Left | WallLocation::Right => {
-                Vec2::new(WALL_THICKNESS, arena_height + WALL_THICKNESS)
-            }
-            WallLocation::Bottom | WallLocation::Top => {
-                Vec2::new(arena_width + WALL_THICKNESS, WALL_THICKNESS)
-            }
-        }
-    }
-}
-
-impl Wall {
-    // This "builder method" allows us to reuse logic across our wall entities,
-    // making our code easier to read and less prone to bugs when we change the logic
-    // Notice the use of Sprite and Transform alongside Wall, overwriting the default values defined for the required components
-    fn new(location: WallLocation) -> (Wall, Sprite, Transform) {
-        (
-            Wall,
-            Sprite::from_color(WALL_COLOR, Vec2::ONE),
-            Transform {
-                // We need to convert our Vec2 into a Vec3, by giving it a z-coordinate
-                // This is used to determine the order of our sprites
-                translation: location.position().extend(0.0),
-                // The z-scale of 2D objects must always be 1.0,
-                // or their ordering will be affected in surprising ways.
-                // See https://github.com/bevyengine/bevy/issues/4149
-                scale: location.size().extend(1.0),
-                ..default()
-            },
-        )
-    }
-}
 
 // This resource tracks the game's score
 #[derive(Resource, Deref, DerefMut)]
@@ -180,7 +109,7 @@ fn setup(
     commands.insert_resource(CollisionSound(ball_collision_sound));
 
     // Paddle
-    let paddle_y = BOTTOM_WALL + GAP_BETWEEN_PADDLE_AND_FLOOR;
+    let paddle_y = wall::BOTTOM_WALL + GAP_BETWEEN_PADDLE_AND_FLOOR;
 
     commands.spawn((
         Sprite::from_color(PADDLE_COLOR, Vec2::ONE),
@@ -229,15 +158,17 @@ fn setup(
     ));
 
     // Walls
-    commands.spawn(Wall::new(WallLocation::Left));
-    commands.spawn(Wall::new(WallLocation::Right));
-    commands.spawn(Wall::new(WallLocation::Bottom));
-    commands.spawn(Wall::new(WallLocation::Top));
+    commands.spawn(wall::Wall::new(wall::WallLocation::Left));
+    commands.spawn(wall::Wall::new(wall::WallLocation::Right));
+    commands.spawn(wall::Wall::new(wall::WallLocation::Bottom));
+    commands.spawn(wall::Wall::new(wall::WallLocation::Top));
 
     // Bricks
-    let total_width_of_bricks = (RIGHT_WALL - LEFT_WALL) - 2. * GAP_BETWEEN_BRICKS_AND_SIDES;
+    let total_width_of_bricks =
+        (wall::RIGHT_WALL - wall::LEFT_WALL) - 2. * GAP_BETWEEN_BRICKS_AND_SIDES;
     let bottom_edge_of_bricks = paddle_y + GAP_BETWEEN_PADDLE_AND_BRICKS;
-    let total_height_of_bricks = TOP_WALL - bottom_edge_of_bricks - GAP_BETWEEN_BRICKS_AND_CEILING;
+    let total_height_of_bricks =
+        wall::TOP_WALL - bottom_edge_of_bricks - GAP_BETWEEN_BRICKS_AND_CEILING;
 
     assert!(total_width_of_bricks > 0.0);
     assert!(total_height_of_bricks > 0.0);
@@ -249,7 +180,7 @@ fn setup(
 
     // Because we need to round the number of columns,
     // the space on the top and sides of the bricks only captures a lower bound, not an exact value
-    let center_of_bricks = (LEFT_WALL + RIGHT_WALL) / 2.0;
+    let center_of_bricks = (wall::LEFT_WALL + wall::RIGHT_WALL) / 2.0;
     let left_edge_of_bricks = center_of_bricks
         // Space taken up by the bricks
         - (n_columns as f32 / 2.0 * BRICK_SIZE.x)
@@ -307,8 +238,10 @@ fn move_paddle(
 
     // Update the paddle position,
     // making sure it doesn't cause the paddle to leave the arena
-    let left_bound = LEFT_WALL + WALL_THICKNESS / 2.0 + PADDLE_SIZE.x / 2.0 + PADDLE_PADDING;
-    let right_bound = RIGHT_WALL - WALL_THICKNESS / 2.0 - PADDLE_SIZE.x / 2.0 - PADDLE_PADDING;
+    let left_bound =
+        wall::LEFT_WALL + wall::WALL_THICKNESS / 2.0 + PADDLE_SIZE.x / 2.0 + PADDLE_PADDING;
+    let right_bound =
+        wall::RIGHT_WALL - wall::WALL_THICKNESS / 2.0 - PADDLE_SIZE.x / 2.0 - PADDLE_PADDING;
 
     paddle_transform.translation.x = new_paddle_position.clamp(left_bound, right_bound);
 }
