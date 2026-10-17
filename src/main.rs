@@ -136,7 +136,7 @@ fn check_for_brick_brick_collisions(bricks: Query<(&Transform, &mut Velocity), W
             if let Some(_) = collisions {
                 for (i_velocity, (_, mut velocity)) in bricks.into_iter().enumerate() {
                     if i_velocity == i || i_velocity == j {
-                        **velocity *= 0.5;
+                        **velocity *= -0.5;
                     }
                 }
                 return;
