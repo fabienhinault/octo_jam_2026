@@ -51,12 +51,7 @@ pub(crate) fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    // Camera
-    commands.spawn(Camera2d);
-
-    // Sound
-    let ball_collision_sound = asset_server.load("sounds/breakout_collision.ogg");
-    commands.insert_resource(CollisionSound(ball_collision_sound));
+    setup_background(&mut commands, asset_server);
 
     // Paddle
     let paddle_y = wall::BOTTOM_WALL + GAP_BETWEEN_PADDLE_AND_FLOOR;
@@ -81,37 +76,6 @@ pub(crate) fn setup(
         Ball,
         Velocity(INITIAL_BALL_DIRECTION.normalize() * BALL_SPEED),
     ));
-
-    // Scoreboard
-    commands.spawn((
-        Text::new("Score: "),
-        TextFont {
-            font_size: SCOREBOARD_FONT_SIZE,
-            ..default()
-        },
-        TextColor(TEXT_COLOR),
-        ScoreboardUi,
-        Node {
-            position_type: PositionType::Absolute,
-            top: SCOREBOARD_TEXT_PADDING,
-            left: SCOREBOARD_TEXT_PADDING,
-            ..default()
-        },
-        children![(
-            TextSpan::default(),
-            TextFont {
-                font_size: SCOREBOARD_FONT_SIZE,
-                ..default()
-            },
-            TextColor(SCORE_COLOR),
-        )],
-    ));
-
-    // Walls
-    commands.spawn(wall::Wall::new(wall::WallLocation::Left));
-    commands.spawn(wall::Wall::new(wall::WallLocation::Right));
-    commands.spawn(wall::Wall::new(wall::WallLocation::Bottom));
-    commands.spawn(wall::Wall::new(wall::WallLocation::Top));
 
     // Bricks
     let total_width_of_bricks =
@@ -148,23 +112,68 @@ pub(crate) fn setup(
                 offset_x + column as f32 * (BRICK_SIZE.x + GAP_BETWEEN_BRICKS),
                 offset_y + row as f32 * (BRICK_SIZE.y + GAP_BETWEEN_BRICKS),
             );
+            let velocity = INITIAL_BRICKS_DIRECTION.normalize() * 0.0;
 
             // brick
-            commands.spawn((
-                Sprite {
-                    color: BRICK_COLOR,
-                    ..default()
-                },
-                Transform {
-                    translation: brick_position.extend(0.0),
-                    scale: Vec3::new(BRICK_SIZE.x, BRICK_SIZE.y, 1.0),
-                    ..default()
-                },
-                Brick,
-                Collider,
-                Velocity(INITIAL_BRICKS_DIRECTION.normalize() * 0.0),
-                Health(2),
-            ));
+            spawn_brick(&mut commands, brick_position, velocity);
         }
     }
+}
+
+pub fn spawn_brick(commands: &mut Commands<'_, '_>, brick_position: Vec2, velocity: Vec2) {
+    commands.spawn((
+        Sprite {
+            color: BRICK_COLOR,
+            ..default()
+        },
+        Transform {
+            translation: brick_position.extend(0.0),
+            scale: Vec3::new(BRICK_SIZE.x, BRICK_SIZE.y, 1.0),
+            ..default()
+        },
+        Brick,
+        Collider,
+        Velocity(velocity),
+        Health(2),
+    ));
+}
+
+pub fn setup_background(commands: &mut Commands<'_, '_>, asset_server: Res<'_, AssetServer>) {
+    // Camera
+    commands.spawn(Camera2d);
+
+    // Sound
+    let ball_collision_sound = asset_server.load("sounds/breakout_collision.ogg");
+    commands.insert_resource(CollisionSound(ball_collision_sound));
+
+    // Scoreboard
+    commands.spawn((
+        Text::new("Score: "),
+        TextFont {
+            font_size: SCOREBOARD_FONT_SIZE,
+            ..default()
+        },
+        TextColor(TEXT_COLOR),
+        ScoreboardUi,
+        Node {
+            position_type: PositionType::Absolute,
+            top: SCOREBOARD_TEXT_PADDING,
+            left: SCOREBOARD_TEXT_PADDING,
+            ..default()
+        },
+        children![(
+            TextSpan::default(),
+            TextFont {
+                font_size: SCOREBOARD_FONT_SIZE,
+                ..default()
+            },
+            TextColor(SCORE_COLOR),
+        )],
+    ));
+
+    // Walls
+    commands.spawn(wall::Wall::new(wall::WallLocation::Left));
+    commands.spawn(wall::Wall::new(wall::WallLocation::Right));
+    commands.spawn(wall::Wall::new(wall::WallLocation::Bottom));
+    commands.spawn(wall::Wall::new(wall::WallLocation::Top));
 }

@@ -13,6 +13,7 @@ const BACKGROUND_COLOR: Color = Color::srgb(0.9, 0.9, 0.9);
 
 mod setup;
 mod stepping;
+mod test_setups;
 mod wall;
 
 fn main() {
@@ -26,6 +27,7 @@ fn main() {
         .insert_resource(Score(0))
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .add_systems(Startup, setup::setup)
+        //.add_systems(Startup, test_setups::setup_one_brick)
         // Add our simulation systems to the update schedule
         // which is called once per frame.
         .add_systems(
@@ -307,24 +309,41 @@ fn ball_collision(ball: BoundingCircle, bounding_box: Aabb2d) -> Option<Collisio
     Some(side)
 }
 
+fn intersection_box(bounding_box0: &Aabb2d, bounding_box1: &Aabb2d) -> Aabb2d {
+    Aabb2d::from_point_cloud(
+        Isometry2d::IDENTITY,
+        &[
+            Vec2::new(
+                bounding_box0.min.x.max(bounding_box1.min.x),
+                bounding_box0.min.y.max(bounding_box1.min.y),
+            ),
+            Vec2::new(
+                bounding_box0.max.x.min(bounding_box1.max.x),
+                bounding_box0.max.y.min(bounding_box1.max.y),
+            ),
+        ],
+    )
+}
+
 // Returns `Some` if `ball` collides with `bounding_box`.
 // The returned `Collision` is the side of `bounding_box` that `ball` hit.
 fn box_collision(bounding_box0: &Aabb2d, bounding_box1: &Aabb2d) -> Option<(Collision, Collision)> {
     if !bounding_box0.intersects(bounding_box1) {
         return None;
     }
-
-    let closest = bounding_box0.closest_point(bounding_box1.center());
-    let offset = bounding_box0.center() - closest;
-    Some(if offset.x.abs() > offset.y.abs() {
-        if offset.x < 0. {
-            (Collision::Left, Collision::Right)
-        } else {
+    let inter = intersection_box(bounding_box0, bounding_box1);
+    let half_size = inter.half_size();
+    Some(if half_size.x < half_size.y {
+        if inter.center().x < bounding_box0.center().x {
             (Collision::Right, Collision::Left)
+        } else {
+            (Collision::Left, Collision::Right)
         }
-    } else if offset.y > 0. {
-        (Collision::Top, Collision::Bottom)
     } else {
-        (Collision::Bottom, Collision::Top)
+        if inter.center().y < bounding_box0.center().y {
+            (Collision::Top, Collision::Bottom)
+        } else {
+            (Collision::Bottom, Collision::Top)
+        }
     })
 }
